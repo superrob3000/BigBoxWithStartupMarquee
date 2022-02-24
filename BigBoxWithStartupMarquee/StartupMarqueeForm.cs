@@ -24,9 +24,42 @@ namespace BigBoxWithStartupMarquee
 
         Process ps_mplayer = null;
         Process ps_bigbox = null;
+        Process ps_monitor = null;
+
         public StartupMarqueeForm()
         {
             InitializeComponent();
+
+            //Start the monitor if it's not already running
+            {
+                bool MonitorRunning = false;
+                Process[] Processes = System.Diagnostics.Process.GetProcesses();
+                for (int i = 0; i < Processes.Length; i++)
+                {
+                    if (Processes[i].ProcessName.StartsWith("OmegaBigBoxMonitor"))
+                    {
+                        MonitorRunning = true;
+                    }
+                }
+
+                if (!MonitorRunning)
+                {
+                    ps_monitor = new Process();
+                    ps_monitor.StartInfo.UseShellExecute = false;
+                    ps_monitor.StartInfo.RedirectStandardInput = false;
+                    ps_monitor.StartInfo.RedirectStandardOutput = false;
+                    ps_monitor.StartInfo.CreateNoWindow = true;
+                    ps_monitor.StartInfo.UserName = null;
+                    ps_monitor.StartInfo.Password = null;
+                    ps_monitor.StartInfo.WindowStyle = ProcessWindowStyle.Normal;
+                    ps_monitor.StartInfo.FileName = Path.GetDirectoryName(Application.ExecutablePath).ToString() + "/OmegaBigBoxMonitor.exe";
+                    if (File.Exists(ps_monitor.StartInfo.FileName))
+                    {
+                        ps_monitor.Start();
+                    }
+                }
+            }
+
 
             //Check if BigBox is already running
             {
