@@ -15,7 +15,8 @@ namespace BigBoxWithStartupMarquee
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new StartupMarqueeForm());
+            try { Application.Run(new StartupMarqueeForm()); }
+            catch { }   
         }
     }
 }

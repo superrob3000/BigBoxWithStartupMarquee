@@ -79,6 +79,7 @@ namespace BigBoxWithStartupMarquee
             this.Text = "BigBoxWithStartupMarquee";
             this.TopMost = true;
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form1_FormClosed);
+            this.Shown += new System.EventHandler(this.StartupMarqueeForm_Shown);
             this.tableLayoutPanel1.ResumeLayout(false);
             this.ResumeLayout(false);
 

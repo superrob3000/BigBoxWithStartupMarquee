@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Automation;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using System.Xml.XPath;
@@ -26,9 +23,20 @@ namespace BigBoxWithStartupMarquee
         Process ps_bigbox = null;
         Process ps_monitor = null;
 
+        String ExecutablePath;
+
         public StartupMarqueeForm()
         {
             InitializeComponent();
+
+            ExecutablePath = Path.GetDirectoryName(Application.ExecutablePath).ToString();
+
+            if(!File.Exists(Path.Combine(ExecutablePath, "BigBox.exe")))
+            {
+                //If we aren't in the LaunchBox folder then just force
+                //the path (useful for debugging).
+                ExecutablePath = "C:/Users/Administrator/LaunchBox/";
+            }
 
             //Start the monitor if it's not already running
             {
@@ -52,7 +60,7 @@ namespace BigBoxWithStartupMarquee
                     ps_monitor.StartInfo.UserName = null;
                     ps_monitor.StartInfo.Password = null;
                     ps_monitor.StartInfo.WindowStyle = ProcessWindowStyle.Normal;
-                    ps_monitor.StartInfo.FileName = Path.GetDirectoryName(Application.ExecutablePath).ToString() + "/OmegaBigBoxMonitor.exe";
+                    ps_monitor.StartInfo.FileName = ExecutablePath + "/OmegaBigBoxMonitor.exe";
                     if (File.Exists(ps_monitor.StartInfo.FileName))
                     {
                         ps_monitor.Start();
@@ -90,7 +98,7 @@ namespace BigBoxWithStartupMarquee
             ps_bigbox.StartInfo.UserName = null;
             ps_bigbox.StartInfo.Password = null;
             ps_bigbox.StartInfo.WindowStyle = ProcessWindowStyle.Normal;
-            ps_bigbox.StartInfo.FileName = Path.GetDirectoryName(Application.ExecutablePath).ToString() + "/BigBox.exe";
+            ps_bigbox.StartInfo.FileName = ExecutablePath + "/BigBox.exe";
             ps_bigbox.Start();
 
             //Check to see if we are already running
@@ -115,7 +123,7 @@ namespace BigBoxWithStartupMarquee
             try
             {
                 //Get BigBox settings from XML file
-                string xml_path = Path.GetDirectoryName(Application.ExecutablePath).ToString() + "/Data/BigBoxSettings.xml";
+                string xml_path = ExecutablePath + "/Data/BigBoxSettings.xml";
                 XDocument xSettingsDoc;
                 xSettingsDoc = XDocument.Load(xml_path);
 
@@ -131,7 +139,7 @@ namespace BigBoxWithStartupMarquee
                 }
 
                 //Get Omega settings from XML file
-                xml_path = Path.GetDirectoryName(Application.ExecutablePath).ToString() + "/Data/OmegaSettings.xml";
+                xml_path = ExecutablePath + "/Data/OmegaSettings.xml";
                 xSettingsDoc = XDocument.Load(xml_path);
 
                 MarqueeWidth = xSettingsDoc
@@ -182,11 +190,11 @@ namespace BigBoxWithStartupMarquee
             ps_mplayer.StartInfo.WindowStyle = ProcessWindowStyle.Minimized; //Minimize the cmd window
 
             //Path to mplayer            
-            ps_mplayer.StartInfo.FileName = Path.GetDirectoryName(Application.ExecutablePath).ToString() + "/ThirdParty/MPlayer/mplayer.exe";
+            ps_mplayer.StartInfo.FileName = ExecutablePath + "/ThirdParty/MPlayer/mplayer.exe";
 
             //Choose random video from Launchbox/Videos/StartupMarquee
             var rand = new Random();
-            var files = Directory.GetFiles(Path.GetDirectoryName(Application.ExecutablePath).ToString() + "/Videos/StartupMarquee");
+            var files = Directory.GetFiles(ExecutablePath + "/Videos/StartupMarquee");
             if (files.Length == 0)
             {
                 this.Close();
@@ -229,7 +237,7 @@ namespace BigBoxWithStartupMarquee
                     IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
                     ShowWindow(handle, 6);
 
-                    milliseconds = 2000;
+                    milliseconds = 1500;
                     Thread.Sleep(milliseconds);
                 }
                 else
@@ -256,7 +264,8 @@ namespace BigBoxWithStartupMarquee
             try
             {
                 //Make sure Mplayer is exited when form is closed
-                ps_mplayer.Kill();
+                if(ps_mplayer != null)
+                    ps_mplayer.Kill();
             }
             catch { }
         }
@@ -266,5 +275,46 @@ namespace BigBoxWithStartupMarquee
 
         }
 
+        private void StartupMarqueeForm_Shown(object sender, EventArgs e)
+        {
+            Task.Factory.StartNew(() => { SetFocusToBigBox(); });
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+        private IntPtr GetHandleWindow(string title)
+        {
+            return FindWindow(null, title);
+        }
+
+        private void SetFocusToBigBox()
+        {
+            IntPtr handle = IntPtr.Zero;
+            AutomationElement element = null;
+            int timeout = 0;
+
+            //Find the BigBox Intro Video window
+            while (timeout++ < 15)
+            {
+                Thread.Sleep(250);
+
+                //This is kind of fragile. It will break if they change
+                //the window title in the future.
+                handle = GetHandleWindow("LaunchBox Big Box Startup Video");
+
+                if (handle != IntPtr.Zero)
+                {
+                    element = AutomationElement.FromHandle(handle);
+                    break;
+                }
+            }
+
+            //Set focus to BigBox so that intro video can be skipped with a button press.                    
+            if (element != null)
+            {
+                element.SetFocus();
+            }
+        }
     }
 }
