@@ -20,8 +20,6 @@ namespace BigBoxWithStartupMarquee
 
 
         Process ps_mplayer = null;
-        Process ps_bigbox = null;
-        Process ps_monitor = null;
 
         String ExecutablePath;
 
@@ -29,7 +27,7 @@ namespace BigBoxWithStartupMarquee
         {
             InitializeComponent();
 
-            ExecutablePath = Path.GetDirectoryName(Application.ExecutablePath).ToString();
+            ExecutablePath = Directory.GetParent(Directory.GetParent(Path.GetDirectoryName(Application.ExecutablePath).ToString()).ToString()).ToString();
 
             if(!File.Exists(Path.Combine(ExecutablePath, "BigBox.exe")))
             {
@@ -38,68 +36,6 @@ namespace BigBoxWithStartupMarquee
                 ExecutablePath = "C:/Users/Administrator/LaunchBox/";
             }
 
-            //Start the monitor if it's not already running
-            {
-                bool MonitorRunning = false;
-                Process[] Processes = System.Diagnostics.Process.GetProcesses();
-                for (int i = 0; i < Processes.Length; i++)
-                {
-                    if (Processes[i].ProcessName.StartsWith("OmegaBigBoxMonitor"))
-                    {
-                        MonitorRunning = true;
-                    }
-                }
-
-                if (!MonitorRunning)
-                {
-                    ps_monitor = new Process();
-                    ps_monitor.StartInfo.UseShellExecute = false;
-                    ps_monitor.StartInfo.RedirectStandardInput = false;
-                    ps_monitor.StartInfo.RedirectStandardOutput = false;
-                    ps_monitor.StartInfo.CreateNoWindow = true;
-                    ps_monitor.StartInfo.UserName = null;
-                    ps_monitor.StartInfo.Password = null;
-                    ps_monitor.StartInfo.WindowStyle = ProcessWindowStyle.Normal;
-                    ps_monitor.StartInfo.FileName = ExecutablePath + "/OmegaBigBoxMonitor.exe";
-                    if (File.Exists(ps_monitor.StartInfo.FileName))
-                    {
-                        ps_monitor.Start();
-                    }
-                }
-            }
-
-
-            //Check if BigBox is already running
-            {
-                bool BigBoxRunning = false;
-                Process[] Processes = System.Diagnostics.Process.GetProcesses();
-                for (int i = 0; i < Processes.Length; i++)
-                {
-                    if (Processes[i].ProcessName.StartsWith("LaunchBox"))
-                    {
-                        BigBoxRunning = true;
-                    }
-                }
-
-                if (BigBoxRunning)
-                {
-                    MessageBox.Show("An instance of BigBox is still running.");
-                    this.Close();
-                    return;
-                }
-            }
-
-            // Start bigbox
-            ps_bigbox = new Process();
-            ps_bigbox.StartInfo.UseShellExecute = false;
-            ps_bigbox.StartInfo.RedirectStandardInput = false;
-            ps_bigbox.StartInfo.RedirectStandardOutput = false;
-            ps_bigbox.StartInfo.CreateNoWindow = true;
-            ps_bigbox.StartInfo.UserName = null;
-            ps_bigbox.StartInfo.Password = null;
-            ps_bigbox.StartInfo.WindowStyle = ProcessWindowStyle.Normal;
-            ps_bigbox.StartInfo.FileName = ExecutablePath + "/BigBox.exe";
-            ps_bigbox.Start();
 
             //Check to see if we are already running
             {
@@ -120,6 +56,8 @@ namespace BigBoxWithStartupMarquee
                 }
             }
 
+            Screen marquee;
+
             try
             {
                 //Get BigBox settings from XML file
@@ -138,29 +76,64 @@ namespace BigBoxWithStartupMarquee
                     return;
                 }
 
-                //Get Omega settings from XML file
-                xml_path = ExecutablePath + "/Data/OmegaSettings.xml";
-                xSettingsDoc = XDocument.Load(xml_path);
+                marquee = Screen.AllScreens[Convert.ToInt32(MarqueeMonitorIndex)];
 
-                MarqueeWidth = xSettingsDoc
-                .XPathSelectElement("/OmegaSettings")
-                .Element("MarqueeWidth")
+
+                //Use BigBox default Marquee settings
+                MarqueeStretchImages = xSettingsDoc
+                .XPathSelectElement("/LaunchBox/BigBoxSettings")
+                .Element("MarqueeStretchImages")
                 .Value;
 
-                MarqueeHeight = xSettingsDoc
-                .XPathSelectElement("/OmegaSettings")
-                .Element("MarqueeHeight")
+                MarqueeScreenCompatibilityMode = xSettingsDoc
+                .XPathSelectElement("/LaunchBox/BigBoxSettings")
+                .Element("MarqueeScreenCompatibilityMode")
                 .Value;
 
-                MarqueeStretch = xSettingsDoc
-                .XPathSelectElement("/OmegaSettings")
-                .Element("MarqueeStretch")
-                .Value;
+                if (MarqueeStretchImages.Equals("true"))
+                    MarqueeStretch = "Fill";
+                else
+                    MarqueeStretch = "Preserve Aspect Ratio";
 
-                MarqueeVerticalAlignment = xSettingsDoc
-                .XPathSelectElement("/OmegaSettings")
-                .Element("MarqueeVerticalAlignment")
-                .Value;
+                MarqueeWidth = Convert.ToString(marquee.Bounds.Size.Width);
+
+                switch (MarqueeScreenCompatibilityMode)
+                {
+                    case "TopHalfCutOff":
+                        MarqueeHeight = Convert.ToString(marquee.Bounds.Size.Height / 2);
+                        MarqueeVerticalAlignment = "Bottom";
+                        break;
+                    case "TopTwoThirdsCutOff":
+                        MarqueeHeight = Convert.ToString(marquee.Bounds.Size.Height / 3);
+                        MarqueeVerticalAlignment = "Bottom";
+                        break;
+
+                    case "TopAndBottomOneThirdCutOff":
+                        MarqueeHeight = Convert.ToString(marquee.Bounds.Size.Height / 3);
+                        MarqueeVerticalAlignment = "Center";
+                        break;
+
+                    case "BottomHalfCutOff":
+                        MarqueeHeight = Convert.ToString(marquee.Bounds.Size.Height / 2);
+                        MarqueeVerticalAlignment = "Top";
+                        break;
+                    case "BottomTwoThirdsCutOff":
+                        MarqueeHeight = Convert.ToString(marquee.Bounds.Size.Height / 3);
+                        MarqueeVerticalAlignment = "Top";
+                        break;
+
+
+                    case "HalfSizeStretched":
+                    case "ThirdSizeStretched":
+                        //Currently not supported
+
+                    case "None":
+                    default:
+                        MarqueeHeight = Convert.ToString(marquee.Bounds.Size.Height);
+                        MarqueeVerticalAlignment = "Top";
+                        break;
+
+                }
             }
             catch
             {
@@ -168,7 +141,6 @@ namespace BigBoxWithStartupMarquee
                 return;
             }
 
-            Screen marquee = Screen.AllScreens[Convert.ToInt32(MarqueeMonitorIndex)];
 
             ///Set size and location of this form
             this.Width = Convert.ToInt32(MarqueeWidth);
@@ -202,57 +174,47 @@ namespace BigBoxWithStartupMarquee
             }
 
             //-wid will tell MPlayer to show output inisde our panel
-            ps_mplayer.StartInfo.Arguments = "\"" + files[rand.Next(files.Length)] + "\" ";
+            String file = files[rand.Next(files.Length)];
+
+            //Check for static image
+            if (Path.GetExtension(file).Equals(".jpg"))
+            {
+                //static images only work from current directory.
+                Directory.SetCurrentDirectory(ExecutablePath + "/Videos/StartupMarquee");
+                ps_mplayer.StartInfo.Arguments = "\"" + "mf://" + Path.GetFileName(file) + "\" " + "-mf type=jpg ";
+            }
+            else if (Path.GetExtension(file).Equals(".png"))
+            {
+                //static images only work from current directory.
+                Directory.SetCurrentDirectory(ExecutablePath + "/Videos/StartupMarquee");
+                ps_mplayer.StartInfo.Arguments = "\"" + "mf://" + Path.GetFileName(file) + "\" " + "-mf type=png ";
+            }
+            else
+            {
+                ps_mplayer.StartInfo.Arguments = "\"" + file + "\" ";
+            }
 
             if (MarqueeStretch.Equals("Fill"))
                 ps_mplayer.StartInfo.Arguments += " -aspect " + this.Width + ":" + this.Height;
 
             ps_mplayer.StartInfo.Arguments += " -colorkey 0x00000000 -noborder -nosound -loop 0 -nomouseinput -noconsolecontrols -wid " + (int)panel1.Handle;
 
-
-            //Wait for BigBox
-            bool BigBoxStarted = false;
-            int count = 0;
-            while (!BigBoxStarted)
-            {
-                int milliseconds = 500;
-                Thread.Sleep(milliseconds);
-                {
-                    Process[] Processes = System.Diagnostics.Process.GetProcesses();
-                    for (int i = 0; i < Processes.Length; i++)
-                    {
-                        if (Processes[i].ProcessName.StartsWith("LaunchBox"))
-                        {
-                            BigBoxStarted = true;
-                        }
-                    }
-                }
-
-                if (BigBoxStarted)
-                {
-                    //Start mplayer
-                    ps_mplayer.Start();
+            //Start mplayer
+            ps_mplayer.Start();
 
 
-                    IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
-                    ShowWindow(handle, 6);
+            IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
+            ShowWindow(handle, 6);
 
-                    milliseconds = 1500;
-                    Thread.Sleep(milliseconds);
-                }
-                else
-                {
-                    if (++count > 15)
-                    {
-                        this.Close();
-                        return;
-                    }
-                }
-
-            }
+            Thread.Sleep(1500); //ms
         }
 
+        //BigBox settings
         private string MarqueeMonitorIndex;
+        private string MarqueeStretchImages;
+        private string MarqueeScreenCompatibilityMode;
+
+        //Omega settings
         private string MarqueeWidth;
         private string MarqueeHeight;
         private string MarqueeStretch;
