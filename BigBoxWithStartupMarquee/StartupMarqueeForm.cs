@@ -33,7 +33,10 @@ namespace BigBoxWithStartupMarquee
             {
                 //If we aren't in the LaunchBox folder then just force
                 //the path (useful for debugging).
-                ExecutablePath = "C:/Users/Administrator/LaunchBox/";
+                //                ExecutablePath = "C:/Users/Administrator/LaunchBox/";
+
+//                this.Close();
+//                return;
             }
 
 
