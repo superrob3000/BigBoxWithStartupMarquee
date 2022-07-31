@@ -43,7 +43,7 @@ namespace BigBoxWithStartupMarquee
                 int pcount = 0;
                 for (int i = 0; i < Processes.Length; i++)
                 {
-                    if (Processes[i].ProcessName.StartsWith("BigBoxWithStartupMarquee"))
+                    if (Processes[i].ProcessName.Contains("StartupMarquee"))
                     {
                         pcount++;
                     }
