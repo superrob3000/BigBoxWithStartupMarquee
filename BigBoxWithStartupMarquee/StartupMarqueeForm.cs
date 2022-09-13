@@ -180,13 +180,13 @@ namespace BigBoxWithStartupMarquee
             String file = files[rand.Next(files.Length)];
 
             //Check for static image
-            if (Path.GetExtension(file).Equals(".jpg"))
+            if (Path.GetExtension(file).ToLower().Equals(".jpg"))
             {
                 //static images only work from current directory.
                 Directory.SetCurrentDirectory(ExecutablePath + "/Videos/StartupMarquee");
                 ps_mplayer.StartInfo.Arguments = "\"" + "mf://" + Path.GetFileName(file) + "\" " + "-mf type=jpg ";
             }
-            else if (Path.GetExtension(file).Equals(".png"))
+            else if (Path.GetExtension(file).ToLower().Equals(".png"))
             {
                 //static images only work from current directory.
                 Directory.SetCurrentDirectory(ExecutablePath + "/Videos/StartupMarquee");
